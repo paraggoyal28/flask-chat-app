@@ -3,7 +3,7 @@ from werkzeug.security import generate_password_hash
 import certifi
 from user import User
 
-client = MongoClient("mongodb+srv://1997paraggoyal:parag@mychatcluster.4q5dz4s.mongodb.net/?retryWrites=true&w=majority&appName=MyChatCluster", tlsCAFile=certifi.where())
+client = MongoClient("mongodb+srv://<user>:<password>@mychatcluster.4q5dz4s.mongodb.net/?retryWrites=true&w=majority&appName=MyChatCluster", tlsCAFile=certifi.where())
 
 chat_db = client.get_database("ChatDB")
 users_collection = chat_db.get_collection("users")
