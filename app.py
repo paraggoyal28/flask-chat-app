@@ -2,9 +2,10 @@ from flask import Flask, render_template, request, redirect, url_for
 from flask_socketio import SocketIO, join_room, leave_room
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from pymongo.errors import DuplicateKeyError
-
+from datetime import datetime
+from bson.json_util import dumps
 from db import get_user, save_user, save_room, add_room_members, get_rooms_for_user, get_room, is_room_member, \
-    get_room_members, is_room_admin, update_room, remove_room_members
+    get_room_members, is_room_admin, update_room, remove_room_members, save_message, get_messages
 
 app = Flask(__name__)
 app.secret_key = "my_secret_key"
@@ -117,10 +118,23 @@ def view_room(room_id):
     room = get_room(room_id)
     if room and is_room_member(room_id, current_user.username):
         room_members = get_room_members(room_id)
+        messages = get_messages(room_id)
         return render_template('view_room.html',
                                username=current_user.username,
                                room=room,
-                               room_members=room_members)
+                               room_members=room_members,
+                               messages=messages)
+    else:
+        return "Room not found", 404
+
+@app.route('/rooms/<room_id>/messages/')
+@login_required
+def get_older_messages(room_id):
+    room = get_room(room_id)
+    if room and is_room_member(room_id, current_user.username):
+        page = int(request.args.get('page', 0))
+        messages = get_messages(room_id, page)
+        return dumps(messages)
     else:
         return "Room not found", 404
 
@@ -133,6 +147,8 @@ def handle_join_room_event(data):
 @socketio.on('send_message')
 def send_message(data):
     print("{} has sent message to the room {}: {}".format(data['username'], data['room'], data['message']))
+    data['created_at'] = datetime.now().strftime("%d %b, %H:%M")
+    save_message(data['room'], data['message'], data['username'])
     socketio.emit('receive_message', data, room=data['room'])
 
 @socketio.on('leave_room')
